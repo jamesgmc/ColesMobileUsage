@@ -137,12 +137,13 @@ export default function App() {
     const grouped = filteredData.reduce((acc, row) => {
       const d = row.Date;
       if (!acc[d]) {
-        acc[d] = { Date: d, DisplayDate: row.DisplayDate, DisplayDay: row.DisplayDay, DataUp: 0, DataDown: 0, Duration: 0, Events: 0 };
+        acc[d] = { Date: d, DisplayDate: row.DisplayDate, DisplayDay: row.DisplayDay, DataUp: 0, DataDown: 0, Duration: 0, Events: 0, EventsList: [] };
       }
       acc[d].DataUp += row.DataUp;
       acc[d].DataDown += row.DataDown;
       acc[d].Duration += row.Duration;
       acc[d].Events += 1;
+      acc[d].EventsList.push(row);
       return acc;
     }, {});
     
@@ -379,17 +380,63 @@ export default function App() {
 
                     {/* DAILY VIEW */}
                     {viewMode === 'daily' && dailyData.map((row, i) => (
-                      <tr key={i} className="hover:bg-zinc-800/50 transition-colors">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-zinc-200">
-                          {row.DisplayDate}
-                          {row.DisplayDay && <span className="text-xs text-zinc-500 font-normal ml-1">{row.DisplayDay}</span>}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-400 text-right">{row.Events}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-300 text-right font-mono">{row.Duration}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-indigo-400 font-medium text-right font-mono">{formatBytes(row.TotalData)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-400 text-right font-mono">{formatBytes(row.DataUp)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-cyan-400 text-right font-mono">{formatBytes(row.DataDown)}</td>
-                      </tr>
+                      <React.Fragment key={i}>
+                        <tr 
+                          className="hover:bg-zinc-800/50 transition-colors cursor-pointer group"
+                          onClick={() => toggleDayExpand(`daily-${row.Date}`)}
+                        >
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-zinc-200">
+                            <span className="mr-2 text-zinc-500 group-hover:text-zinc-300 transition-colors inline-block w-4">
+                              {expandedDays[`daily-${row.Date}`] ? <ChevronDown className="w-3 h-3 inline" /> : <ChevronRight className="w-3 h-3 inline" />}
+                            </span>
+                            {row.DisplayDate}
+                            {row.DisplayDay && <span className="text-xs text-zinc-500 font-normal ml-1">{row.DisplayDay}</span>}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-400 text-right">{row.Events}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-300 text-right font-mono">{row.Duration}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-indigo-400 font-medium text-right font-mono">{formatBytes(row.TotalData)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-400 text-right font-mono">{formatBytes(row.DataUp)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-cyan-400 text-right font-mono">{formatBytes(row.DataDown)}</td>
+                        </tr>
+                        {expandedDays[`daily-${row.Date}`] && (
+                          <tr>
+                            <td colSpan={6} className="p-0 border-b border-zinc-800/50">
+                              <div className="bg-zinc-950/80 py-3 px-8 border-t border-zinc-800/30">
+                                <h5 className="text-xs font-semibold text-zinc-600 uppercase mb-2 flex items-center">
+                                  <List className="w-3 h-3 mr-2" />
+                                  Events: {row.DisplayDate}
+                                </h5>
+                                <table className="min-w-full divide-y divide-zinc-800/20">
+                                  <thead>
+                                    <tr>
+                                      <th className="px-2 py-1 text-left text-[10px] font-medium text-zinc-600 uppercase">Time</th>
+                                      <th className="px-2 py-1 text-left text-[10px] font-medium text-zinc-600 uppercase">Event</th>
+                                      <th className="px-2 py-1 text-left text-[10px] font-medium text-zinc-600 uppercase">To</th>
+                                      <th className="px-2 py-1 text-right text-[10px] font-medium text-zinc-600 uppercase">Dur (s)</th>
+                                      <th className="px-2 py-1 text-right text-[10px] font-medium text-zinc-600 uppercase">Up</th>
+                                      <th className="px-2 py-1 text-right text-[10px] font-medium text-zinc-600 uppercase">Down</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-zinc-800/20">
+                                    {row.EventsList.map((evt, k) => (
+                                      <tr key={k} className="hover:bg-zinc-800/40">
+                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-zinc-400">{evt.Time}</td>
+                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-zinc-400">
+                                          <span className="bg-zinc-800/50 px-1 py-0.5 rounded text-[10px]">{evt.Event}</span>
+                                        </td>
+                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-zinc-500">{evt.To}</td>
+                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-zinc-500 text-right font-mono">{evt.Duration}</td>
+                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-zinc-500 text-right font-mono">{formatBytes(evt.DataUp)}</td>
+                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-cyan-500/70 text-right font-mono">{formatBytes(evt.DataDown)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     ))}
 
                     {/* MONTHLY VIEW */}
