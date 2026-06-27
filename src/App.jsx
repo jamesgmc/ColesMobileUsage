@@ -99,6 +99,15 @@ export default function App() {
     }));
   };
 
+  const [expandedDays, setExpandedDays] = useState({});
+
+  const toggleDayExpand = (dayKey) => {
+    setExpandedDays(prev => ({
+      ...prev,
+      [dayKey]: !prev[dayKey]
+    }));
+  };
+
   // --- Data Aggregation ---
   const filteredData = useMemo(() => {
     if (!searchTerm) return data;
@@ -182,12 +191,13 @@ export default function App() {
 
       // Group sub-daily
       if (!acc[monthKey].Daily[row.Date]) {
-        acc[monthKey].Daily[row.Date] = { Date: row.Date, DisplayDate: row.DisplayDate, DisplayDay: row.DisplayDay, DataUp: 0, DataDown: 0, Duration: 0, Events: 0 };
+        acc[monthKey].Daily[row.Date] = { Date: row.Date, DisplayDate: row.DisplayDate, DisplayDay: row.DisplayDay, DataUp: 0, DataDown: 0, Duration: 0, Events: 0, EventsList: [] };
       }
       acc[monthKey].Daily[row.Date].DataUp += row.DataUp;
       acc[monthKey].Daily[row.Date].DataDown += row.DataDown;
       acc[monthKey].Daily[row.Date].Duration += row.Duration;
       acc[monthKey].Daily[row.Date].Events += 1;
+      acc[monthKey].Daily[row.Date].EventsList.push(row);
 
       return acc;
     }, {});
@@ -419,15 +429,61 @@ export default function App() {
                                   </thead>
                                   <tbody className="divide-y divide-zinc-800/30">
                                     {row.DailyArr.map((dDay, j) => (
-                                      <tr key={j} className="hover:bg-zinc-800/30">
-                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-zinc-300">
-                                          {dDay.DisplayDate}
-                                          {dDay.DisplayDay && <span className="text-xs text-zinc-500 ml-1">{dDay.DisplayDay}</span>}
-                                        </td>
-                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-zinc-400 text-right">{dDay.Events}</td>
-                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-zinc-400 text-right font-mono">{dDay.Duration}</td>
-                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-indigo-400/80 text-right font-mono">{formatBytes(dDay.TotalData)}</td>
-                                      </tr>
+                                      <React.Fragment key={j}>
+                                        <tr 
+                                          className="hover:bg-zinc-800/30 cursor-pointer group"
+                                          onClick={() => toggleDayExpand(`${row.Month}-${dDay.Date}`)}
+                                        >
+                                          <td className="px-3 py-2 whitespace-nowrap text-sm text-zinc-300">
+                                            <span className="mr-2 text-zinc-500 group-hover:text-zinc-300 transition-colors inline-block w-4">
+                                              {expandedDays[`${row.Month}-${dDay.Date}`] ? <ChevronDown className="w-3 h-3 inline" /> : <ChevronRight className="w-3 h-3 inline" />}
+                                            </span>
+                                            {dDay.DisplayDate}
+                                            {dDay.DisplayDay && <span className="text-xs text-zinc-500 ml-1">{dDay.DisplayDay}</span>}
+                                          </td>
+                                          <td className="px-3 py-2 whitespace-nowrap text-sm text-zinc-400 text-right">{dDay.Events}</td>
+                                          <td className="px-3 py-2 whitespace-nowrap text-sm text-zinc-400 text-right font-mono">{dDay.Duration}</td>
+                                          <td className="px-3 py-2 whitespace-nowrap text-sm text-indigo-400/80 text-right font-mono">{formatBytes(dDay.TotalData)}</td>
+                                        </tr>
+                                        {expandedDays[`${row.Month}-${dDay.Date}`] && (
+                                          <tr>
+                                            <td colSpan={4} className="p-0 border-b border-zinc-800/50">
+                                              <div className="bg-zinc-950/80 py-3 px-8 border-t border-zinc-800/30">
+                                                <h5 className="text-xs font-semibold text-zinc-600 uppercase mb-2 flex items-center">
+                                                  <List className="w-3 h-3 mr-2" />
+                                                  Events: {dDay.DisplayDate}
+                                                </h5>
+                                                <table className="min-w-full divide-y divide-zinc-800/20">
+                                                  <thead>
+                                                    <tr>
+                                                      <th className="px-2 py-1 text-left text-[10px] font-medium text-zinc-600 uppercase">Time</th>
+                                                      <th className="px-2 py-1 text-left text-[10px] font-medium text-zinc-600 uppercase">Event</th>
+                                                      <th className="px-2 py-1 text-left text-[10px] font-medium text-zinc-600 uppercase">To</th>
+                                                      <th className="px-2 py-1 text-right text-[10px] font-medium text-zinc-600 uppercase">Dur (s)</th>
+                                                      <th className="px-2 py-1 text-right text-[10px] font-medium text-zinc-600 uppercase">Up</th>
+                                                      <th className="px-2 py-1 text-right text-[10px] font-medium text-zinc-600 uppercase">Down</th>
+                                                    </tr>
+                                                  </thead>
+                                                  <tbody className="divide-y divide-zinc-800/20">
+                                                    {dDay.EventsList.map((evt, k) => (
+                                                      <tr key={k} className="hover:bg-zinc-800/40">
+                                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-zinc-400">{evt.Time}</td>
+                                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-zinc-400">
+                                                          <span className="bg-zinc-800/50 px-1 py-0.5 rounded text-[10px]">{evt.Event}</span>
+                                                        </td>
+                                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-zinc-500">{evt.To}</td>
+                                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-zinc-500 text-right font-mono">{evt.Duration}</td>
+                                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-zinc-500 text-right font-mono">{formatBytes(evt.DataUp)}</td>
+                                                        <td className="px-2 py-1 whitespace-nowrap text-xs text-cyan-500/70 text-right font-mono">{formatBytes(evt.DataDown)}</td>
+                                                      </tr>
+                                                    ))}
+                                                  </tbody>
+                                                </table>
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        )}
+                                      </React.Fragment>
                                     ))}
                                   </tbody>
                                 </table>
