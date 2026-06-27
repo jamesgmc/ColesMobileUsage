@@ -1,0 +1,7 @@
+services:
+  app:
+    image: zxspectrum48k/colesmobileusage:latest
+    ports:
+      - "8120:80"
+    restart: unless-stopped
+    container_name: colesmobileusage

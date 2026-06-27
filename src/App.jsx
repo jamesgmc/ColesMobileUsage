@@ -51,17 +51,27 @@ export default function App() {
               .filter(row => row.Date && row.Event) // basic validation
               .map(row => {
                 const parts = row.Date.split('/');
-                const displayDate = parts.length === 3 ? `${parts[1]}/${parts[0]}/${parts[2]}` : row.Date;
+                let displayDate = row.Date;
+                let displayDay = '';
+                if (parts.length === 3) {
+                  const d = new Date(row.Date);
+                  if (!isNaN(d)) {
+                    displayDay = `(${d.toLocaleDateString('en-US', { weekday: 'short' })})`;
+                  }
+                  displayDate = `${parts[1]}/${parts[0]}/${parts[2]}`;
+                }
                 return {
                   Event: row.Event,
                   To: row.To,
                   Date: row.Date,
                   DisplayDate: displayDate,
+                  DisplayDay: displayDay,
                   Time: row.Time,
                   Duration: parseInt(row['Duration (Sec)'] || '0', 10),
                   DataUp: parseFloat(row['Data Up (KB)'] || '0'),
                   DataDown: parseFloat(row['Data Down (KB)'] || '0'),
                   Price: row.Price || '$0'
+
                 };
               });
             setData(parsedData);
@@ -118,7 +128,7 @@ export default function App() {
     const grouped = filteredData.reduce((acc, row) => {
       const d = row.Date;
       if (!acc[d]) {
-        acc[d] = { Date: d, DisplayDate: row.DisplayDate, DataUp: 0, DataDown: 0, Duration: 0, Events: 0 };
+        acc[d] = { Date: d, DisplayDate: row.DisplayDate, DisplayDay: row.DisplayDay, DataUp: 0, DataDown: 0, Duration: 0, Events: 0 };
       }
       acc[d].DataUp += row.DataUp;
       acc[d].DataDown += row.DataDown;
@@ -172,7 +182,7 @@ export default function App() {
 
       // Group sub-daily
       if (!acc[monthKey].Daily[row.Date]) {
-        acc[monthKey].Daily[row.Date] = { Date: row.Date, DisplayDate: row.DisplayDate, DataUp: 0, DataDown: 0, Duration: 0, Events: 0 };
+        acc[monthKey].Daily[row.Date] = { Date: row.Date, DisplayDate: row.DisplayDate, DisplayDay: row.DisplayDay, DataUp: 0, DataDown: 0, Duration: 0, Events: 0 };
       }
       acc[monthKey].Daily[row.Date].DataUp += row.DataUp;
       acc[monthKey].Daily[row.Date].DataDown += row.DataDown;
@@ -341,7 +351,10 @@ export default function App() {
                     {/* RAW VIEW */}
                     {viewMode === 'raw' && rawSorted.map((row, i) => (
                       <tr key={i} className="hover:bg-zinc-800/50 transition-colors">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-300">{row.DisplayDate}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-300">
+                          {row.DisplayDate}
+                          {row.DisplayDay && <span className="text-xs text-zinc-500 ml-1">{row.DisplayDay}</span>}
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-400">{row.Time}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-300">
                           <span className="bg-zinc-800 px-2 py-1 rounded text-xs">{row.Event}</span>
@@ -357,7 +370,10 @@ export default function App() {
                     {/* DAILY VIEW */}
                     {viewMode === 'daily' && dailyData.map((row, i) => (
                       <tr key={i} className="hover:bg-zinc-800/50 transition-colors">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-zinc-200">{row.DisplayDate}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-zinc-200">
+                          {row.DisplayDate}
+                          {row.DisplayDay && <span className="text-xs text-zinc-500 font-normal ml-1">{row.DisplayDay}</span>}
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-400 text-right">{row.Events}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-zinc-300 text-right font-mono">{row.Duration}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-indigo-400 font-medium text-right font-mono">{formatBytes(row.TotalData)}</td>
@@ -404,7 +420,10 @@ export default function App() {
                                   <tbody className="divide-y divide-zinc-800/30">
                                     {row.DailyArr.map((dDay, j) => (
                                       <tr key={j} className="hover:bg-zinc-800/30">
-                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-zinc-300">{dDay.DisplayDate}</td>
+                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-zinc-300">
+                                          {dDay.DisplayDate}
+                                          {dDay.DisplayDay && <span className="text-xs text-zinc-500 ml-1">{dDay.DisplayDay}</span>}
+                                        </td>
                                         <td className="px-3 py-2 whitespace-nowrap text-sm text-zinc-400 text-right">{dDay.Events}</td>
                                         <td className="px-3 py-2 whitespace-nowrap text-sm text-zinc-400 text-right font-mono">{dDay.Duration}</td>
                                         <td className="px-3 py-2 whitespace-nowrap text-sm text-indigo-400/80 text-right font-mono">{formatBytes(dDay.TotalData)}</td>
